@@ -1,0 +1,370 @@
+---
+title: "Recruitment"
+author: "Dustin Pashouwer"
+date: "Jun 30, 2018 (Replace with date uploaded to OpenSDP)"
+output: 
+  html_document:
+    theme: simplex
+    css: ../includes/styles.css
+    highlight: NULL
+    keep_md: true
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+---
+
+# Recruitment
+*Caption*
+
+*Programmed in R*
+
+## Getting Started
+```{r knitrSetup, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, comment=NA}
+# Set options for knitr
+library(knitr)
+knitr::opts_chunk$set(comment=NA, warning=FALSE, echo=TRUE,
+                      root.dir = normalizePath("../"),
+                      error=FALSE, message=FALSE, fig.align='center',
+                      fig.width=8, fig.height=6, dpi = 144, 
+                      fig.path = "../figure/E_", 
+                      cache.path = "../cache/E_")
+options(width=80)
+```
+
+
+<div class="navbar navbar-default navbar-fixed-top" id="logo">
+<div class="container">
+<img src="../img/open_sdp_logo_red.png" style="display: block; margin: 0 auto; height: 115px;">
+</div>
+</div>
+
+### Objective
+
+In this guide, you will be able to...**explain objective here**
+
+### Using this Guide
+
+This guide utilizes data from...**explain origin of data here** 
+
+Once you have identified analyses that you want to try to replicate or modify, click the 
+"Download" buttons to download R code and sample data. You can make changes to the 
+charts using the code and sample data, or modify the code to work with your own data. If 
+you are familiar with Github, you can click "Go to Repository" and clone the entire repository to your own computer. 
+
+Go to the Participate page to read about more ways to engage with the OpenSDP community or reach out for assistance in adapting this code for your specific context.
+
+### About the Data
+
+The data used in this guide...**explain origin of data, key features of data, and any other key information**. Create a small table of data features and description, like this:
+
+| Feature name    | Feature Description                                 |
+|:-----------     |:------------------                                  |
+| `grade_level`   | Grade level of exam student took (3-8)              |
+| `school_code`   | School ID number                                    |
+| `sid`           | Student ID number                                   |
+| `male`          | Student gender                                      |
+| `race_ethnicity`| Student race/ethnicity                              |
+| `eco_dis`       | Student level of economic disadvantage              |
+| `lep`           | Level of Limited English Proficiency                |
+| `iep`           | Indicator if student enrolled in special education  |
+| `rdg_ss`        | Scale score for reading exam                        |
+| `math_ss`       | Scale score for math exam                           |
+
+#### Loading the OpenSDP Dataset and R Packages
+
+This guide takes advantage of several key R packages. The first chunk of code below loads the R packages (make sure to install first!), and the second chunk loads the dataset.**Feel free to add R packages to this, so long as they are common and trustworthy**
+
+```{r packages, echo=TRUE}
+library(tidyverse) # main suite of R packages to ease data analysis
+library(magrittr)
+library(janitor)
+library(here)
+library(tntpr)
+library(haven)
+
+# Read in some R functions that are convenience wrappers
+source("../R/functions.R")
+#pkgTest("devtools")
+#pkgTest("OpenSDPsynthR")
+```
+
+```{r loaddataset, eacho=FALSE}
+# // Step 1: Read in dat file of our dataset, naming it "texas.data"
+student_teacher_year_analysis <- read_dta(here("data/Student_Teacher_Year_Analysis.dta"))
+teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
+```
+
+## Analyses
+
+#### Calculate the Share of Teachers Who Are New Hires ----------------------------------------
+
+**Purpose:** Describe the share of teachers in the agency who are new hires.
+
+**Required Analysis File Variables:**
+
+- `tid` 
+- `school_year`        
+- `t_newhire` 
+- `t_novice`      
+
+**Analysis-specific sample restrictions**
+
+- Keep only years for which new hire information is available.
+
+**Ask Yourself**
+
+- How is your workforce balanced between novice and veteran teachers? Is the ratio what you expected?
+- What are the major sources of novice new hires in your agency? Experienced new hires?
+- How does your recruiting strategy affect the composition of your teacher workforce?
+
+**Potential further analyses**
+
+You can use a pie chart like this one to examine the overall distribution of various characteristics of your teacher workforce. For example, you can use a pie chart to examine categorical variables such as teacher gender, race, or tenure status, or group continuous variables such as in-district experience, total teaching experience, or teacher age into three to seven categories and then display the share of teachers in each category.
+
+```{r, echo=TRUE}
+# // Step 1: Load the Teacher_Year_Analysis data file.
+teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
+
+# // Step 2: Restrict the analysis sample.
+teacher_year_analysis %<>% 
+  filter(school_year > 2010, 
+         !is.na(t_newhire), 
+         !is.na(t_novice), 
+         !is.na(t_experience))
+
+# // Step 3: Review variables.
+teacher_year_analysis %>% tabyl(t_newhire)
+teacher_year_analysis %>% tabyl(t_novice)
+teacher_year_analysis %>% tabyl(t_newhire, t_novice)
+
+# // Step 4: Define a new variable which includes both novice and experienced new hires.
+teacher_year_analysis %<>% 
+  mutate(pie_hire = case_when(t_newhire == 0 ~ "Experienced Teachers",
+                              t_newhire == 1 & t_novice == 0 ~ "Experienced New Hires",
+                              t_newhire == 1 & t_novice == 1 ~ "Novice New Hires"), 
+         pie_hire = factor(pie_hire, levels = c("Experienced Teachers", "Experienced New Hires", "Novice New Hires")))
+
+# // Step 5: Calculate and store sample sizes for the chart footnote.
+
+teacher_year_analysis %>% 
+  tabyl(pie_hire) %>% 
+  ggplot(aes(x = " ", y = n, fill = pie_hire)) + 
+    geom_bar(stat = "identity") + 
+    geom_text(aes(label = scales::percent(percent, accuracy = 1)), position = position_stack(vjust = 0.5)) + 
+    labs(title = "Share of Teacher Who Are New Hires", 
+         fill = NULL) + 
+    theme_tntp_2018(grid = FALSE,
+                    axis_text = FALSE)
+
+```
+
+#### Examine the Share of New Hires Across School Years ----------------------------------------
+
+**Purpose:** Examine trends in hiring over time.
+
+**Required Analysis File Variables:**
+
+- `tid` 
+- `school_year`        
+- `t_newhire` 
+- `t_novice`      
+
+**Analysis-specific sample restrictions**
+
+- Keep only years for which new hire information is available.
+
+**Ask Yourself**
+
+- How have hiring trends changed over time?
+- What factors might account for the trends that I see?
+
+**Potential further analyses**
+
+At the state level, yout may wish to exammine hiring trends by year for specific school types or geographic areas. At the district level, you can make a graph of this type in order to examine overall hiring by school or for specific groups of schools, instead of by year.
+
+```{r, echo=TRUE}
+# // Step 1: Load the Teacher_Year_Analysis data file.
+teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
+
+# // Step 2: Restrict the analysis sample.
+teacher_year_analysis %<>% 
+  filter(school_year > 2007, 
+         !is.na(t_newhire), 
+         !is.na(t_novice), 
+         !is.na(t_experience))
+
+# // Step 3:  Generate veteran new hire indicator.
+teacher_year_analysis %<>% 
+  mutate(t_newhire_type = case_when(t_newhire == 1 & t_novice == 1 ~ "Novice New Hire",
+                                    t_newhire == 1 & t_novice == 0 ~ "Experienced New Hire",
+                                    TRUE ~ "Returned Teachers"), 
+         t_newhire_type = t_newhire_type %>% 
+           factor(levels = c("Novice New Hire", "Experienced New Hire", "Returned Teachers")))
+
+# // Step 4:  Review variables to be used in the analysis.
+
+
+
+# // Step 5:  Calculate counts table.
+tabyl_school_year_t_newhire_type_n <- teacher_year_analysis %>% 
+  tabyl(school_year, t_newhire_type) %>% 
+  gather(type, n, -school_year)
+
+# // Step 6:  Calculate percentages table.
+tabyl_school_year_t_newhire_type_perc <- teacher_year_analysis %>% 
+  tabyl(school_year, t_newhire_type) %>% 
+  adorn_percentages("row") %>% 
+  gather(type, percent, -school_year)
+
+# // Step 7:  Calculate significance indicator variables by year.
+
+teacher_year_analysis %>% 
+  tabyl(school_year, t_newhire_type) %>% 
+  chisq.test()
+
+?chisq.test
+
+tabyl_school_year_t_newhire_type_sig <- chisq.test(tabyl(school_year, t_newhire_type))$stdres %>% # or is it residuals
+  mutate_at(vars(-school_year), ~ ifelse(. > 1.96, "*", "")) %>% 
+  mutate(school_year = as.double(school_year))
+
+# // Step 8:  Concatenate values and significance asterisks to make value labels.
+tabyl_school_year_t_newhire_type <- tabyl_school_year_t_newhire_type_perc %>% 
+  left_join(tabyl_school_year_t_newhire_type_sig, by = "school_year", suffix = c("", "_sig")) %>% 
+  mutate(`Experienced New Hire_label` = paste0(scales::percent(`Experienced New Hire`, accuracy = 1), `Experienced New Hire_sig`),
+         `Novice New Hire_label` = paste0(scales::percent(`Novice New Hire`, accuracy = 1), `Novice New Hire_sig`))
+
+# // Step 9:  Create a stacked bar graph using overlaid bars.
+tabyl_school_year_t_newhire_type %>% 
+  gather(type, percent, `Novice New Hire`:`Returned Teachers`) %>% 
+  gather(type, label, `Experienced New Hire_label`:`Experienced New Hire_label`) %>% 
+  ggplot(aes(x = school_year, y = percent, fill = type)) + 
+    geom_bar(stat = "identity")
+
+
+
+```
+
+#### Compare the Shares of New Hires Across School Poverty Quartiles ----------------------------------------
+
+**Purpose:** Examine the extent to which new hires are distributed unevenly across the agency according to school characteristics.
+
+**Required Analysis File Variables:**
+
+- `tid` 
+- `school_year`        
+- `t_newhire` 
+- `t_novice`
+- `school_poverty_quartile`
+
+**Analysis-specific sample restrictions**
+
+- Keep only years for which new hire information is available.
+
+**Ask Yourself**
+
+- How do hiring patterns differ between high and low-poverty schools?
+- Are the shares of novice and veteran hires distributed equitably and strategically across school poverty quartiles?
+
+**Potential further analyses**
+
+You can use a version of this graph to look at how new hires are distributed across other quartiles of school characteristics. For example, you can examine new hiring by school average test score quartile, or school minority percent quartile.
+
+```{r, echo=TRUE}
+
+```
+
+#### Examine the Distribution of Teachers and Students by Race ----------------------------------------
+
+**Purpose:** Compares the shares of all teachers, newly hired teachers, and students by race.
+
+**Required Analysis File Variables:**
+
+- `tid` 
+- `school_year`        
+- `t_newhire` 
+- `t_race_ethnicity`
+- `sid`
+- `s_race_ethnicity`
+
+**Analysis-specific sample restrictions**
+
+- For the student and teacher samples, keep only records for which race information is not missing.
+- For the student and teacher samples, keep only years for which teacher new hire information is available.
+
+**Ask Yourself**
+
+- Is the racial composition of your teacher workforce similar to the racial composition of your student body? Is there a difference in racial composition between all teachers and newly hired teachers?
+- If there is a difference between teachers and students, what impact might this have on student learning?
+
+**Potential further analyses**
+
+You may wish to replicate this analysis for specific schools or groups of schools.
+
+```{r, echo=TRUE}
+# // Step 1: Load the Teacher_Year_Analysis data file.
+teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
+
+# // Step 3: Restrict the teacher sample.
+teacher_year_analysis %<>% 
+  filter(school_year == 2011, 
+         !is.na(t_race_ethnicity))
+
+# // Step 4: Review teacher variables.
+
+
+# // Step 5: Get teacher sample sizes.
+tabyl_t_race_ethnicity <- teacher_year_analysis %>% 
+  tabyl(t_race_ethnicity) %>% 
+  select(race_ethnicity = t_race_ethnicity, 
+         t_total = percent)
+
+tabyl_new_t_race_ethnicity <- teacher_year_analysis %>% 
+  filter(t_newhire == 1) %>% 
+  tabyl(t_race_ethnicity) %>% 
+  select(race_ethnicity = t_race_ethnicity, 
+         t_newhire = percent)
+
+# // Step 6: Load the Student_School_Year data file to get student data.
+student_teacher_year_analysis <- read_dta(here("data/Student_Teacher_Year_Analysis.dta"))
+
+# // Step 7: Make the file unique by sid and school_year.
+student_teacher_year_analysis %<>% 
+  distinct(sid, school_year, .keep_all = TRUE)
+
+# // Step 8: Restrict the student sample.
+student_teacher_year_analysis %<>% 
+  filter(school_year == 2011, 
+         !is.na(s_race_ethnicity))
+
+# // Step 9: Get student sample sizes.
+tabyl_s_race_ethnicity <- student_teacher_year_analysis %>% 
+  tabyl(s_race_ethnicity) %>% 
+  select(race_ethnicity = s_race_ethnicity, 
+         s_total = percent)
+
+# // Step 10: Join teacher and student data tables.
+race_ethnicity_tabyl <- full_join(tabyl_t_race_ethnicity, tabyl_new_t_race_ethnicity, by = "race_ethnicity") %>% 
+  full_join(tabyl_s_race_ethnicity, by = "race_ethnicity")
+
+# // Step 2: Factorize the race/ethnicity categories.
+race_ethnicity_tabyl <- race_ethnicity_tabyl %>% 
+  filter(race_ethnicity %in% c(1, 2, 3, 5)) %>% 
+  mutate(race_ethnicity = case_when(race_ethnicity == 1 ~ "Black", 
+                                    race_ethnicity == 2 ~ "Asian", 
+                                    race_ethnicity == 3 ~ "Latino", 
+                                    race_ethnicity == 5 ~ "White"))
+
+# // Step 2: Graph the results.
+race_ethnicity_tabyl %>% 
+  gather(type, percent, -race_ethnicity) %>% 
+  ggplot(aes(race_ethnicity, percent, fill = type)) + 
+    geom_bar(stat = "identity", position = position_dodge()) + 
+    geom_text(aes(label = scales::percent(percent, accuracy = 1)), position = position_dodge())
+
+```
+
+
+
+
