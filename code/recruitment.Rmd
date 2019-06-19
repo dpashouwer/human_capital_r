@@ -39,43 +39,13 @@ options(width=80)
 </div>
 </div>
 
-### Objective
-
-In this guide, you will be able to...**explain objective here**
-
-### Using this Guide
-
-This guide utilizes data from...**explain origin of data here** 
-
-Once you have identified analyses that you want to try to replicate or modify, click the 
-"Download" buttons to download R code and sample data. You can make changes to the 
-charts using the code and sample data, or modify the code to work with your own data. If 
-you are familiar with Github, you can click "Go to Repository" and clone the entire repository to your own computer. 
-
-Go to the Participate page to read about more ways to engage with the OpenSDP community or reach out for assistance in adapting this code for your specific context.
-
-### About the Data
-
-The data used in this guide...**explain origin of data, key features of data, and any other key information**. Create a small table of data features and description, like this:
-
-| Feature name    | Feature Description                                 |
-|:-----------     |:------------------                                  |
-| `grade_level`   | Grade level of exam student took (3-8)              |
-| `school_code`   | School ID number                                    |
-| `sid`           | Student ID number                                   |
-| `male`          | Student gender                                      |
-| `race_ethnicity`| Student race/ethnicity                              |
-| `eco_dis`       | Student level of economic disadvantage              |
-| `lep`           | Level of Limited English Proficiency                |
-| `iep`           | Indicator if student enrolled in special education  |
-| `rdg_ss`        | Scale score for reading exam                        |
-| `math_ss`       | Scale score for math exam                           |
-
+### Analysis
+                     |
 #### Loading the OpenSDP Dataset and R Packages
 
 This guide takes advantage of several key R packages. The first chunk of code below loads the R packages (make sure to install first!), and the second chunk loads the dataset.**Feel free to add R packages to this, so long as they are common and trustworthy**
 
-```{r packages, echo=TRUE}
+```{r packages, echo=FALSE}
 library(tidyverse) # main suite of R packages to ease data analysis
 library(magrittr)
 library(janitor)
@@ -87,12 +57,6 @@ library(haven)
 source("../R/functions.R")
 #pkgTest("devtools")
 #pkgTest("OpenSDPsynthR")
-```
-
-```{r loaddataset, eacho=FALSE}
-# // Step 1: Read in dat file of our dataset, naming it "texas.data"
-student_teacher_year_analysis <- read_dta(here("data/Student_Teacher_Year_Analysis.dta"))
-teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
 ```
 
 ## Analyses
@@ -223,25 +187,24 @@ teacher_year_analysis %>%
   tabyl(school_year, t_newhire_type) %>% 
   chisq.test()
 
-?chisq.test
-
-tabyl_school_year_t_newhire_type_sig <- chisq.test(tabyl(school_year, t_newhire_type))$stdres %>% # or is it residuals
-  mutate_at(vars(-school_year), ~ ifelse(. > 1.96, "*", "")) %>% 
-  mutate(school_year = as.double(school_year))
-
-# // Step 8:  Concatenate values and significance asterisks to make value labels.
-tabyl_school_year_t_newhire_type <- tabyl_school_year_t_newhire_type_perc %>% 
-  left_join(tabyl_school_year_t_newhire_type_sig, by = "school_year", suffix = c("", "_sig")) %>% 
-  mutate(`Experienced New Hire_label` = paste0(scales::percent(`Experienced New Hire`, accuracy = 1), `Experienced New Hire_sig`),
-         `Novice New Hire_label` = paste0(scales::percent(`Novice New Hire`, accuracy = 1), `Novice New Hire_sig`))
-
-# // Step 9:  Create a stacked bar graph using overlaid bars.
-tabyl_school_year_t_newhire_type %>% 
-  gather(type, percent, `Novice New Hire`:`Returned Teachers`) %>% 
-  gather(type, label, `Experienced New Hire_label`:`Experienced New Hire_label`) %>% 
-  ggplot(aes(x = school_year, y = percent, fill = type)) + 
-    geom_bar(stat = "identity")
-
+# 
+# tabyl_school_year_t_newhire_type_sig <- chisq.test(tabyl(school_year, t_newhire_type))$stdres %>% # or is it residuals
+#   mutate_at(vars(-school_year), ~ ifelse(. > 1.96, "*", "")) %>% 
+#   mutate(school_year = as.double(school_year))
+# 
+# # // Step 8:  Concatenate values and significance asterisks to make value labels.
+# tabyl_school_year_t_newhire_type <- tabyl_school_year_t_newhire_type_perc %>% 
+#   left_join(tabyl_school_year_t_newhire_type_sig, by = "school_year", suffix = c("", "_sig")) %>% 
+#   mutate(`Experienced New Hire_label` = paste0(scales::percent(`Experienced New Hire`, accuracy = 1), `Experienced New Hire_sig`),
+#          `Novice New Hire_label` = paste0(scales::percent(`Novice New Hire`, accuracy = 1), `Novice New Hire_sig`))
+# 
+# # // Step 9:  Create a stacked bar graph using overlaid bars.
+# tabyl_school_year_t_newhire_type %>% 
+#   gather(type, percent, `Novice New Hire`:`Returned Teachers`) %>% 
+#   gather(type, label, `Experienced New Hire_label`:`Experienced New Hire_label`) %>% 
+#   ggplot(aes(x = school_year, y = percent, fill = type)) + 
+#     geom_bar(stat = "identity")
+# 
 
 
 ```
