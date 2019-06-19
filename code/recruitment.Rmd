@@ -23,13 +23,15 @@ output:
 ```{r knitrSetup, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, comment=NA}
 # Set options for knitr
 library(knitr)
-knitr::opts_chunk$set(comment=NA, warning=FALSE, echo=TRUE,
-                      root.dir = normalizePath("../"),
-                      error=FALSE, message=FALSE, fig.align='center',
-                      fig.width=8, fig.height=6, dpi = 144, 
-                      fig.path = "../figure/E_", 
-                      cache.path = "../cache/E_")
-options(width=80)
+knitr::opts_chunk$set(
+  comment = NA, warning = FALSE, echo = TRUE,
+  root.dir = normalizePath("../"),
+  error = FALSE, message = FALSE, fig.align = "center",
+  fig.width = 8, fig.height = 6, dpi = 144,
+  fig.path = "../figure/E_",
+  cache.path = "../cache/E_"
+)
+options(width = 80)
 ```
 
 
@@ -55,8 +57,8 @@ library(haven)
 
 # Read in some R functions that are convenience wrappers
 source("../R/functions.R")
-#pkgTest("devtools")
-#pkgTest("OpenSDPsynthR")
+# pkgTest("devtools")
+# pkgTest("OpenSDPsynthR")
 ```
 
 ## Analyses
@@ -91,11 +93,13 @@ You can use a pie chart like this one to examine the overall distribution of var
 teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
 
 # // Step 2: Restrict the analysis sample.
-teacher_year_analysis %<>% 
-  filter(school_year > 2010, 
-         !is.na(t_newhire), 
-         !is.na(t_novice), 
-         !is.na(t_experience))
+teacher_year_analysis %<>%
+  filter(
+    school_year > 2010,
+    !is.na(t_newhire),
+    !is.na(t_novice),
+    !is.na(t_experience)
+  )
 
 # // Step 3: Review variables.
 teacher_year_analysis %>% tabyl(t_newhire)
@@ -103,24 +107,31 @@ teacher_year_analysis %>% tabyl(t_novice)
 teacher_year_analysis %>% tabyl(t_newhire, t_novice)
 
 # // Step 4: Define a new variable which includes both novice and experienced new hires.
-teacher_year_analysis %<>% 
-  mutate(pie_hire = case_when(t_newhire == 0 ~ "Experienced Teachers",
-                              t_newhire == 1 & t_novice == 0 ~ "Experienced New Hires",
-                              t_newhire == 1 & t_novice == 1 ~ "Novice New Hires"), 
-         pie_hire = factor(pie_hire, levels = c("Experienced Teachers", "Experienced New Hires", "Novice New Hires")))
+teacher_year_analysis %<>%
+  mutate(
+    pie_hire = case_when(
+      t_newhire == 0 ~ "Experienced Teachers",
+      t_newhire == 1 & t_novice == 0 ~ "Experienced New Hires",
+      t_newhire == 1 & t_novice == 1 ~ "Novice New Hires"
+    ),
+    pie_hire = factor(pie_hire, levels = c("Experienced Teachers", "Experienced New Hires", "Novice New Hires"))
+  )
 
 # // Step 5: Calculate and store sample sizes for the chart footnote.
 
-teacher_year_analysis %>% 
-  tabyl(pie_hire) %>% 
-  ggplot(aes(x = " ", y = n, fill = pie_hire)) + 
-    geom_bar(stat = "identity") + 
-    geom_text(aes(label = scales::percent(percent, accuracy = 1)), position = position_stack(vjust = 0.5)) + 
-    labs(title = "Share of Teacher Who Are New Hires", 
-         fill = NULL) + 
-    theme_tntp_2018(grid = FALSE,
-                    axis_text = FALSE)
-
+teacher_year_analysis %>%
+  tabyl(pie_hire) %>%
+  ggplot(aes(x = " ", y = n, fill = pie_hire)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = scales::percent(percent, accuracy = 1)), position = position_stack(vjust = 0.5)) +
+  labs(
+    title = "Share of Teacher Who Are New Hires",
+    fill = NULL
+  ) +
+  theme_tntp_2018(
+    grid = FALSE,
+    axis_text = FALSE
+  )
 ```
 
 #### Examine the Share of New Hires Across School Years ----------------------------------------
@@ -152,60 +163,64 @@ At the state level, yout may wish to exammine hiring trends by year for specific
 teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
 
 # // Step 2: Restrict the analysis sample.
-teacher_year_analysis %<>% 
-  filter(school_year > 2007, 
-         !is.na(t_newhire), 
-         !is.na(t_novice), 
-         !is.na(t_experience))
+teacher_year_analysis %<>%
+  filter(
+    school_year > 2007,
+    !is.na(t_newhire),
+    !is.na(t_novice),
+    !is.na(t_experience)
+  )
 
 # // Step 3:  Generate veteran new hire indicator.
-teacher_year_analysis %<>% 
-  mutate(t_newhire_type = case_when(t_newhire == 1 & t_novice == 1 ~ "Novice New Hire",
-                                    t_newhire == 1 & t_novice == 0 ~ "Experienced New Hire",
-                                    TRUE ~ "Returned Teachers"), 
-         t_newhire_type = t_newhire_type %>% 
-           factor(levels = c("Novice New Hire", "Experienced New Hire", "Returned Teachers")))
+teacher_year_analysis %<>%
+  mutate(
+    t_newhire_type = case_when(
+      t_newhire == 1 & t_novice == 1 ~ "Novice New Hire",
+      t_newhire == 1 & t_novice == 0 ~ "Experienced New Hire",
+      TRUE ~ "Returned Teachers"
+    ),
+    t_newhire_type = t_newhire_type %>%
+      factor(levels = c("Novice New Hire", "Experienced New Hire", "Returned Teachers"))
+  )
 
 # // Step 4:  Review variables to be used in the analysis.
 
 
 
-# // Step 5:  Calculate counts table.
-tabyl_school_year_t_newhire_type_n <- teacher_year_analysis %>% 
-  tabyl(school_year, t_newhire_type) %>% 
-  gather(type, n, -school_year)
+# // Step 5:  Calculate counts and percentages table.
+tabyl_school_year_t_newhire_type <- teacher_year_analysis %>% 
+  count(school_year, t_newhire_type) %>% 
+  group_by(school_year) %>% 
+  mutate(percent = n / sum(n)) %>% 
+  ungroup()
 
-# // Step 6:  Calculate percentages table.
-tabyl_school_year_t_newhire_type_perc <- teacher_year_analysis %>% 
-  tabyl(school_year, t_newhire_type) %>% 
-  adorn_percentages("row") %>% 
-  gather(type, percent, -school_year)
-
-# // Step 7:  Calculate significance indicator variables by year.
-
-teacher_year_analysis %>% 
-  tabyl(school_year, t_newhire_type) %>% 
+# // Step 6:  Calculate significance indicator variables by year.
+tabyl_school_year_t_newhire_type_chisq <- tabyl_school_year_t_newhire_type %>% 
+  select(-percent) %>% 
+  spread(t_newhire_type, n) %>% 
+  as_tabyl() %>% 
   chisq.test()
 
-# 
-# tabyl_school_year_t_newhire_type_sig <- chisq.test(tabyl(school_year, t_newhire_type))$stdres %>% # or is it residuals
-#   mutate_at(vars(-school_year), ~ ifelse(. > 1.96, "*", "")) %>% 
-#   mutate(school_year = as.double(school_year))
-# 
-# # // Step 8:  Concatenate values and significance asterisks to make value labels.
-# tabyl_school_year_t_newhire_type <- tabyl_school_year_t_newhire_type_perc %>% 
-#   left_join(tabyl_school_year_t_newhire_type_sig, by = "school_year", suffix = c("", "_sig")) %>% 
-#   mutate(`Experienced New Hire_label` = paste0(scales::percent(`Experienced New Hire`, accuracy = 1), `Experienced New Hire_sig`),
-#          `Novice New Hire_label` = paste0(scales::percent(`Novice New Hire`, accuracy = 1), `Novice New Hire_sig`))
-# 
-# # // Step 9:  Create a stacked bar graph using overlaid bars.
-# tabyl_school_year_t_newhire_type %>% 
-#   gather(type, percent, `Novice New Hire`:`Returned Teachers`) %>% 
-#   gather(type, label, `Experienced New Hire_label`:`Experienced New Hire_label`) %>% 
-#   ggplot(aes(x = school_year, y = percent, fill = type)) + 
-#     geom_bar(stat = "identity")
-# 
+tabyl_school_year_t_newhire_type_sig <- tabyl_school_year_t_newhire_type_chisq$residuals %>%
+  mutate_at(vars(-school_year), ~ ifelse(abs(.) >= 1.96, "*", "")) %>% 
+  gather(t_newhire_type, sig, -school_year) %>% 
+  mutate(school_year = as.double(school_year), 
+         t_newhire_type = as.factor(t_newhire_type))
 
+# // Step 7:  Concatenate values and significance asterisks to make value labels.
+school_year_by_t_newhire_type <- left_join(tabyl_school_year_t_newhire_type, tabyl_school_year_t_newhire_type_sig) %>% 
+  mutate(label = paste0(scales::percent(percent, accuracy = 1), sig))
+
+# // Step 8:  Create a stacked bar graph using overlaid bars.
+school_year_by_t_newhire_type %>% 
+  ggplot(aes(x = school_year, y = percent, fill = t_newhire_type)) + 
+    geom_bar(stat = "identity") + 
+    geom_text(aes(label = label), position = position_fill(0.5)) + 
+    theme_tntp_2018() + 
+    scale_fill_tntp()
+
+# Q: I use the chi-square test here, which I think is a measurement away from the mean.
+# They use a regression with comparison to 2008 as a base year in the OpenSDP example. Can you do this with chi-squared?
 
 ```
 
@@ -270,62 +285,73 @@ You may wish to replicate this analysis for specific schools or groups of school
 teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
 
 # // Step 3: Restrict the teacher sample.
-teacher_year_analysis %<>% 
-  filter(school_year == 2011, 
-         !is.na(t_race_ethnicity))
+teacher_year_analysis %<>%
+  filter(
+    school_year == 2011,
+    !is.na(t_race_ethnicity)
+  )
 
 # // Step 4: Review teacher variables.
 
 
 # // Step 5: Get teacher sample sizes.
-tabyl_t_race_ethnicity <- teacher_year_analysis %>% 
-  tabyl(t_race_ethnicity) %>% 
-  select(race_ethnicity = t_race_ethnicity, 
-         t_total = percent)
+tabyl_t_race_ethnicity <- teacher_year_analysis %>%
+  tabyl(t_race_ethnicity) %>%
+  select(
+    race_ethnicity = t_race_ethnicity,
+    t_total = percent
+  )
 
-tabyl_new_t_race_ethnicity <- teacher_year_analysis %>% 
-  filter(t_newhire == 1) %>% 
-  tabyl(t_race_ethnicity) %>% 
-  select(race_ethnicity = t_race_ethnicity, 
-         t_newhire = percent)
+tabyl_new_t_race_ethnicity <- teacher_year_analysis %>%
+  filter(t_newhire == 1) %>%
+  tabyl(t_race_ethnicity) %>%
+  select(
+    race_ethnicity = t_race_ethnicity,
+    t_newhire = percent
+  )
 
 # // Step 6: Load the Student_School_Year data file to get student data.
 student_teacher_year_analysis <- read_dta(here("data/Student_Teacher_Year_Analysis.dta"))
 
 # // Step 7: Make the file unique by sid and school_year.
-student_teacher_year_analysis %<>% 
+student_teacher_year_analysis %<>%
   distinct(sid, school_year, .keep_all = TRUE)
 
 # // Step 8: Restrict the student sample.
-student_teacher_year_analysis %<>% 
-  filter(school_year == 2011, 
-         !is.na(s_race_ethnicity))
+student_teacher_year_analysis %<>%
+  filter(
+    school_year == 2011,
+    !is.na(s_race_ethnicity)
+  )
 
 # // Step 9: Get student sample sizes.
-tabyl_s_race_ethnicity <- student_teacher_year_analysis %>% 
-  tabyl(s_race_ethnicity) %>% 
-  select(race_ethnicity = s_race_ethnicity, 
-         s_total = percent)
+tabyl_s_race_ethnicity <- student_teacher_year_analysis %>%
+  tabyl(s_race_ethnicity) %>%
+  select(
+    race_ethnicity = s_race_ethnicity,
+    s_total = percent
+  )
 
 # // Step 10: Join teacher and student data tables.
-race_ethnicity_tabyl <- full_join(tabyl_t_race_ethnicity, tabyl_new_t_race_ethnicity, by = "race_ethnicity") %>% 
+race_ethnicity_tabyl <- full_join(tabyl_t_race_ethnicity, tabyl_new_t_race_ethnicity, by = "race_ethnicity") %>%
   full_join(tabyl_s_race_ethnicity, by = "race_ethnicity")
 
 # // Step 2: Factorize the race/ethnicity categories.
-race_ethnicity_tabyl <- race_ethnicity_tabyl %>% 
-  filter(race_ethnicity %in% c(1, 2, 3, 5)) %>% 
-  mutate(race_ethnicity = case_when(race_ethnicity == 1 ~ "Black", 
-                                    race_ethnicity == 2 ~ "Asian", 
-                                    race_ethnicity == 3 ~ "Latino", 
-                                    race_ethnicity == 5 ~ "White"))
+race_ethnicity_tabyl <- race_ethnicity_tabyl %>%
+  filter(race_ethnicity %in% c(1, 2, 3, 5)) %>%
+  mutate(race_ethnicity = case_when(
+    race_ethnicity == 1 ~ "Black",
+    race_ethnicity == 2 ~ "Asian",
+    race_ethnicity == 3 ~ "Latino",
+    race_ethnicity == 5 ~ "White"
+  ))
 
 # // Step 2: Graph the results.
-race_ethnicity_tabyl %>% 
-  gather(type, percent, -race_ethnicity) %>% 
-  ggplot(aes(race_ethnicity, percent, fill = type)) + 
-    geom_bar(stat = "identity", position = position_dodge()) + 
-    geom_text(aes(label = scales::percent(percent, accuracy = 1)), position = position_dodge())
-
+race_ethnicity_tabyl %>%
+  gather(type, percent, -race_ethnicity) %>%
+  ggplot(aes(race_ethnicity, percent, fill = type)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = scales::percent(percent, accuracy = 1)), position = position_dodge())
 ```
 
 
