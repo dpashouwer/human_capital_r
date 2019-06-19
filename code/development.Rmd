@@ -1,0 +1,175 @@
+---
+title: "Development"
+author: "Dustin Pashouwer"
+date: "Jun 30, 2018 (Replace with date uploaded to OpenSDP)"
+output: 
+  html_document:
+    theme: simplex
+    css: ../includes/styles.css
+    highlight: NULL
+    keep_md: true
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+---
+
+# Development
+*Caption*
+
+*Programmed in R*
+
+## Getting Started
+```{r knitrSetup, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, comment=NA}
+# Set options for knitr
+library(knitr)
+knitr::opts_chunk$set(comment=NA, warning=FALSE, echo=TRUE,
+                      root.dir = normalizePath("../"),
+                      error=FALSE, message=FALSE, fig.align='center',
+                      fig.width=8, fig.height=6, dpi = 144, 
+                      fig.path = "../figure/E_", 
+                      cache.path = "../cache/E_")
+options(width=80)
+```
+
+
+<div class="navbar navbar-default navbar-fixed-top" id="logo">
+<div class="container">
+<img src="../img/open_sdp_logo_red.png" style="display: block; margin: 0 auto; height: 115px;">
+</div>
+</div>
+
+### Objective
+
+In this guide, you will be able to...**explain objective here**
+
+### Using this Guide
+
+This guide utilizes data from...**explain origin of data here** 
+
+Once you have identified analyses that you want to try to replicate or modify, click the 
+"Download" buttons to download R code and sample data. You can make changes to the 
+charts using the code and sample data, or modify the code to work with your own data. If 
+you are familiar with Github, you can click "Go to Repository" and clone the entire repository to your own computer. 
+
+Go to the Participate page to read about more ways to engage with the OpenSDP community or reach out for assistance in adapting this code for your specific context.
+
+### About the Data
+
+The data used in this guide...**explain origin of data, key features of data, and any other key information**. Create a small table of data features and description, like this:
+
+| Feature name    | Feature Description                                 |
+|:-----------     |:------------------                                  |
+| `grade_level`   | Grade level of exam student took (3-8)              |
+| `school_code`   | School ID number                                    |
+| `sid`           | Student ID number                                   |
+| `male`          | Student gender                                      |
+| `race_ethnicity`| Student race/ethnicity                              |
+| `eco_dis`       | Student level of economic disadvantage              |
+| `lep`           | Level of Limited English Proficiency                |
+| `iep`           | Indicator if student enrolled in special education  |
+| `rdg_ss`        | Scale score for reading exam                        |
+| `math_ss`       | Scale score for math exam                           |
+
+#### Loading the OpenSDP Dataset and R Packages
+
+This guide takes advantage of several key R packages. The first chunk of code below loads the R packages (make sure to install first!), and the second chunk loads the dataset.
+
+```{r packages, echo=FALSE}
+library(tidyverse) # main suite of R packages to ease data analysis
+library(magrittr)
+library(janitor)
+library(here)
+library(tntpr)
+library(haven)
+
+# Read in some R functions that are convenience wrappers
+source("../R/functions.R")
+#pkgTest("devtools")
+#pkgTest("OpenSDPsynthR")
+```
+
+```{r loaddataset, eacho=FALSE}
+# // Step 1: Read in dat file of our dataset, naming it "texas.data"
+student_teacher_year_analysis <- read_dta(here("data/Student_Teacher_Year_Analysis.dta"))
+teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
+```
+
+## Analyses
+
+#### Compare Teacher Turnover Rates Across School Poverty Quartiles ----------------------------------------
+
+**Purpose:** Observe how teachers’ effectiveness estimates change as they gain teaching experience.
+
+**Required Analysis File Variables:**
+
+- `sid` 
+- `school_year`
+- `tid_math`
+- `cid_math`
+- `grade_level` 
+- `t_is_teacher`      
+- `t_experience`
+- `std_scaled_score_math`
+- `std_scaled_score_math_tm1`
+- `std_scaled_score_ela_tm1`
+
+**Analysis-specific sample restrictions**
+
+- Keep only grades and years for which prior-year test scores are available.
+- Keep only students with a single identified current-year core course and current and prior-year test scores in the given subject.
+- If school-level restriction is chosen, keep only records for either elementary or middle school grades.
+
+**Ask Yourself**
+
+- Teacher salary schedules often compensate teachers for their teaching experience. How does your agency compensate teachers for experience? What are some ways that salary schedules could better align to increases in student outcomes over time?
+- What induction and early career supports do novice teachers have? Do they vary by school, level of instruction (elementary, middle, high), and/or content area? Are the growth trajectories you see most related to recruitment practices, early career supports, or both?
+
+**Potential further analyses**
+
+- If your agency changed induction and/or early career programs and/or policies, conduct this analysis separately for teachers who were and were not affected by the program or policy.
+- Examine other dimensions of teacher effectiveness over time (e.g., trends in student survey results).
+
+```{r, echo=TRUE}
+# // Step 1: Load the Teacher_Year_Analysis data file.
+student_teacher_year_analysis <- read_dta(here("data/Student_Teacher_Year_Analysis.dta"))
+
+# // Step 2: Restrict the sample.
+student_teacher_year_analysis %<>% 
+  filter(school_year %in% 2007:20011, 
+         grade_level %in% 6:8, 
+         !is.na(t_is_teacher), 
+         !is.na(t_experience), 
+         !is.na(cid_math), 
+         !is.na(std_scaled_score_math), 
+         !is.na(std_scaled_score_math_tm1))
+
+# // Step 3: Review teacher variables.
+
+
+# // Step 4: Create teaching experience variables.
+## Create dummy variables for each year of teaching experience, putting all teachers with 10 or more years of experience in one group.
+student_teacher_year_analysis %<>% 
+  mutate(t_experience = ifelse(t_experience >= 10, 10, t_experience))
+
+# // Step 5: Create previous year score variables.
+## Create variables for previous year’s score squared and cubed.
+student_teacher_year_analysis %<>% 
+  mutate(std_scaled_score_math_tm1_sq = std_scaled_score_math_tm1^2, 
+         std_scaled_score_math_tm1_cu = std_scaled_score_math_tm1^3)
+
+# // Step 6: Adjust data for missing students.
+## Create indicator for whether student is missing prior achievement for alternate subject. Make a replacement variable that imputes score to zero if missing.
+
+
+# // Step 7: Choose achievement control variables.
+## Identify prior achievement variables to use as controls.
+achievement_control_varibles <- c("std_scaled_score_math_tm1", 
+                                  "std_scaled_score_math_tm1_sq", 
+                                  "std_scaled_score_math_tm1_cu")
+
+# // Step 8: Choose student control variables.
+## Identify other student variables to use as controls.
+student_teacher_year_analysis$std %>% glimpse()
+
+```
