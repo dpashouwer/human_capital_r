@@ -20,19 +20,7 @@ output:
 *Programmed in R*
 
 ## Getting Started
-```{r knitrSetup, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, comment=NA}
-# Set options for knitr
-library(knitr)
-knitr::opts_chunk$set(
-  comment = NA, warning = FALSE, echo = TRUE,
-  root.dir = normalizePath("../"),
-  error = FALSE, message = FALSE, fig.align = "center",
-  fig.width = 8, fig.height = 6, dpi = 144,
-  fig.path = "../figure/E_",
-  cache.path = "../cache/E_"
-)
-options(width = 80)
-```
+
 
 
 <div class="navbar navbar-default navbar-fixed-top" id="logo">
@@ -47,20 +35,7 @@ options(width = 80)
 
 This guide takes advantage of several key R packages. The first chunk of code below loads the R packages (make sure to install first!), and the second chunk loads the dataset.**Feel free to add R packages to this, so long as they are common and trustworthy**
 
-```{r packages, echo=FALSE}
-library(tidyverse) # main suite of R packages to ease data analysis
-library(magrittr)
-library(janitor)
-library(here)
-library(tntpr)
-library(haven)
-library(rstatix)
 
-# Read in some R functions that are convenience wrappers
-source("../R/functions.R")
-# pkgTest("devtools")
-# pkgTest("OpenSDPsynthR")
-```
 
 ## Analyses
 
@@ -89,12 +64,13 @@ source("../R/functions.R")
 
 You can use a pie chart like this one to examine the overall distribution of various characteristics of your teacher workforce. For example, you can use a pie chart to examine categorical variables such as teacher gender, race, or tenure status, or group continuous variables such as in-district experience, total teaching experience, or teacher age into three to seven categories and then display the share of teachers in each category.
 
-```{r, echo=TRUE}
+
+```r
 # // Step 1: Load the Teacher_Year_Analysis data file.
 teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
 
 # // Step 2: Restrict the analysis sample.
-teacher_year_analysis <- teacher_year_analysis %>%
+teacher_year_analysis %<>%
   filter(
     school_year > 2010,
     !is.na(t_newhire),
@@ -104,11 +80,37 @@ teacher_year_analysis <- teacher_year_analysis %>%
 
 # // Step 3: Review variables.
 teacher_year_analysis %>% tabyl(t_newhire)
-teacher_year_analysis %>% tabyl(t_novice)
-teacher_year_analysis %>% tabyl(t_newhire, t_novice)
+```
 
+```
+ t_newhire    n   percent
+         0 1480 0.8012994
+         1  367 0.1987006
+```
+
+```r
+teacher_year_analysis %>% tabyl(t_novice)
+```
+
+```
+ t_novice    n    percent
+        0 1771 0.95885219
+        1   76 0.04114781
+```
+
+```r
+teacher_year_analysis %>% tabyl(t_newhire, t_novice)
+```
+
+```
+ t_newhire    0  1
+         0 1480  0
+         1  291 76
+```
+
+```r
 # // Step 4: Define a new variable which includes both novice and experienced new hires.
-teacher_year_analysis <- teacher_year_analysis %>%
+teacher_year_analysis %<>%
   mutate(
     pie_hire = case_when(
       t_newhire == 0 ~ "Experienced Teachers",
@@ -120,28 +122,22 @@ teacher_year_analysis <- teacher_year_analysis %>%
 
 # // Step 5: Calculate and store sample sizes for the chart footnote.
 
-
-
-
-
-# // Step 6: Create a pie chart.
-teacher_year_analysis %>% 
-  count(pie_hire) %>% 
-  mutate(percent = round(n / sum(n), 2)) %>% 
+teacher_year_analysis %>%
+  tabyl(pie_hire) %>%
   ggplot(aes(x = " ", y = n, fill = pie_hire)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = scales::percent(percent, accuracy = 1)), position = position_stack(vjust = 0.5)) +
   labs(
     title = "Share of Teacher Who Are New Hires",
-    fill = NULL, 
-    x = NULL, y = NULL
+    fill = NULL
   ) +
   theme_tntp_2018(
     grid = FALSE,
     axis_text = FALSE
-  ) + 
-  scale_fill_tntp()
+  )
 ```
+
+<img src="../figure/E_unnamed-chunk-1-1.png" style="display: block; margin: auto;" />
 
 #### Examine the Share of New Hires Across School Years ----------------------------------------
 
@@ -167,12 +163,13 @@ teacher_year_analysis %>%
 
 At the state level, yout may wish to exammine hiring trends by year for specific school types or geographic areas. At the district level, you can make a graph of this type in order to examine overall hiring by school or for specific groups of schools, instead of by year.
 
-```{r, echo=TRUE}
+
+```r
 # // Step 1: Load the Teacher_Year_Analysis data file.
 teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
 
 # // Step 2: Restrict the analysis sample.
-teacher_year_analysis <- teacher_year_analysis %>%
+teacher_year_analysis %<>%
   filter(
     school_year > 2007,
     !is.na(t_newhire),
@@ -181,15 +178,15 @@ teacher_year_analysis <- teacher_year_analysis %>%
   )
 
 # // Step 3:  Generate veteran new hire indicator.
-teacher_year_analysis <- teacher_year_analysis %>%
+teacher_year_analysis %<>%
   mutate(
     t_newhire_type = case_when(
       t_newhire == 1 & t_novice == 1 ~ "Novice New Hire",
       t_newhire == 1 & t_novice == 0 ~ "Experienced New Hire",
-      TRUE ~ "Returning Teachers"
+      TRUE ~ "Returned Teachers"
     ),
     t_newhire_type = t_newhire_type %>%
-      factor(levels = c("Novice New Hire", "Experienced New Hire", "Returning Teachers"))
+      factor(levels = c("Novice New Hire", "Experienced New Hire", "Returned Teachers"))
   )
 
 # // Step 4:  Review variables to be used in the analysis.
@@ -198,25 +195,26 @@ teacher_year_analysis <- teacher_year_analysis %>%
 
 # // Step 5:  Calculate counts and percentages table.
 tabyl_school_year_t_newhire_type <- teacher_year_analysis %>% 
-  tabyl(school_year, t_newhire) %>% 
-  adorn_percentages("col")
+  count(school_year, t_newhire_type) %>% 
+  group_by(school_year) %>% 
+  mutate(percent = n / sum(n)) %>% 
+  ungroup()
 
 # // Step 6:  Calculate significance indicator variables by year.
-
-tabyl_school_year_t_newhire_type %>% 
+tabyl_school_year_t_newhire_type_chisq <- tabyl_school_year_t_newhire_type %>% 
+  select(-percent) %>% 
+  spread(t_newhire_type, n) %>% 
+  as_tabyl() %>% 
   chisq.test()
 
-
-
-tabyl_school_year_t_newhire_type_sig <- chisq.test(tabyl_school_year_t_newhire_type_sig)$residuals %>% 
-  pivot_longer(cols = 2:ncol(.), 
-               names_ptypes = "school_year", 
-               values_to = "residual") %>% 
-  mutate(sig = ifelse(abs(residual) >= 1.96, "*", ""))
+tabyl_school_year_t_newhire_type_sig <- tabyl_school_year_t_newhire_type_chisq$residuals %>%
+  mutate_at(vars(-school_year), ~ ifelse(abs(.) >= 1.96, "*", "")) %>% 
+  gather(t_newhire_type, sig, -school_year) %>% 
+  mutate(school_year = as.double(school_year), 
+         t_newhire_type = as.factor(t_newhire_type))
 
 # // Step 7:  Concatenate values and significance asterisks to make value labels.
-school_year_by_t_newhire_type <- left_join(tabyl_school_year_t_newhire_type, tabyl_school_year_t_newhire_type_sig, 
-                                           by = c("school_year", "t_newhire_type")) %>% 
+school_year_by_t_newhire_type <- left_join(tabyl_school_year_t_newhire_type, tabyl_school_year_t_newhire_type_sig) %>% 
   mutate(label = paste0(scales::percent(percent, accuracy = 1), sig))
 
 # // Step 8:  Create a stacked bar graph using overlaid bars.
@@ -226,8 +224,13 @@ school_year_by_t_newhire_type %>%
     geom_text(aes(label = label), position = position_fill(0.5)) + 
     theme_tntp_2018() + 
     scale_fill_tntp()
+```
 
+<img src="../figure/E_unnamed-chunk-2-1.png" style="display: block; margin: auto;" />
 
+```r
+# Q: I use the chi-square test here, which I think is a measurement away from the mean.
+# They use a regression with comparison to 2008 as a base year in the OpenSDP example. Can you do this with chi-squared?
 ```
 
 #### Compare the Shares of New Hires Across School Poverty Quartiles ----------------------------------------
@@ -255,9 +258,7 @@ school_year_by_t_newhire_type %>%
 
 You can use a version of this graph to look at how new hires are distributed across other quartiles of school characteristics. For example, you can examine new hiring by school average test score quartile, or school minority percent quartile.
 
-```{r, echo=TRUE}
 
-```
 
 #### Examine the Distribution of Teachers and Students by Race ----------------------------------------
 
@@ -286,7 +287,8 @@ You can use a version of this graph to look at how new hires are distributed acr
 
 You may wish to replicate this analysis for specific schools or groups of schools.
 
-```{r, echo=TRUE}
+
+```r
 # // Step 1: Load the Teacher_Year_Analysis data file.
 teacher_year_analysis <- read_dta(here("data/Teacher_Year_Analysis.dta"))
 
@@ -359,6 +361,8 @@ race_ethnicity_tabyl %>%
   geom_bar(stat = "identity", position = position_dodge()) +
   geom_text(aes(label = scales::percent(percent, accuracy = 1)), position = position_dodge())
 ```
+
+<img src="../figure/E_unnamed-chunk-4-1.png" style="display: block; margin: auto;" />
 
 
 

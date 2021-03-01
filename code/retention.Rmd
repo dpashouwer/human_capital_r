@@ -209,7 +209,8 @@ tabyl_retention_type_by_perc_retained_by_year %>%
   ggplot(aes(school_year, perc_retained, fill = retention_type)) + 
     geom_bar(stat = "identity") + 
     geom_text(aes(label = scales::percent(perc_retained, accuracy = 1)), position = position_fill(0.5)) + 
-    theme_tntp_2018()
+    theme_tntp_2018() + 
+    scale_fill_tntp()
 
 ```
 
